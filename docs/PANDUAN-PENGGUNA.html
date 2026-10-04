@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<title>Panduan Pengguna KonveksiApp</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Inter, Arial, sans-serif; color: #10312c; font-size: 10.5pt; line-height: 1.55; margin: 0; }
+  h1 { color: #0d9488; font-size: 22pt; margin: 0 0 4px; border-bottom: 3px solid #0d9488; padding-bottom: 8px; }
+  h1 + p strong { color: #0f766e; }
+  h2 { color: #0f766e; font-size: 14pt; margin: 22px 0 8px; border-bottom: 1px solid #e4eeec; padding-bottom: 4px; page-break-after: avoid; }
+  h3 { color: #115e59; font-size: 11.5pt; margin: 16px 0 6px; page-break-after: avoid; }
+  h4 { color: #134e4a; font-size: 10.5pt; margin: 12px 0 4px; }
+  p { margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #0d9488; color: #fff; text-align: left; padding: 6px 8px; font-weight: 600; }
+  td { border: 1px solid #e4eeec; padding: 5px 8px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7fbfa; }
+  code { background: #e3f4ef; color: #0f766e; padding: 1px 5px; border-radius: 4px; font-size: 9.5pt; font-family: Consolas, monospace; }
+  pre { background: #0d2b26; color: #d7f5ee; padding: 12px 14px; border-radius: 8px; overflow: hidden; font-size: 9.5pt; line-height: 1.4; page-break-inside: avoid; }
+  pre code { background: none; color: inherit; padding: 0; }
+  blockquote { border-left: 4px solid #0d9488; background: #e3f4ef; margin: 10px 0; padding: 8px 12px; color: #134e4a; }
+  ol, ul { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  strong { color: #0f4c45; }
+  hr { border: none; border-top: 2px solid #e4eeec; margin: 18px 0; }
+  em { color: #64748b; }
+</style></head><body>
+<h1>PANDUAN PENGGUNA — KonveksiApp</h1>
+<p><strong>Sistem Manajemen Konveksi &amp; Penjualan</strong></p>
+<p>Versi Dokumen: Oktober 2026 · Berlaku untuk seluruh modul yang aktif</p>
+<hr />
+<h2>1. Tentang Aplikasi</h2>
+<p>KonveksiApp adalah sistem informasi internal untuk mengelola seluruh proses bisnis konveksi dan penjualan online dalam <strong>satu aplikasi</strong>: mulai dari order masuk, pemilihan barang (picking), pengiriman, stok, produksi, laporan penjualan, payroll karyawan, sampai laporan keuangan owner.</p>
+<p>Prinsip kerja aplikasi:</p>
+<ul>
+<li><strong>Semua angka dihitung otomatis dari data</strong> — tidak ada angka dummy. Selama belum ada transaksi, laporan menampilkan nol (bukan error).</li>
+<li><strong>Hak akses berbasis peran (role)</strong> — menu yang tidak berhak Anda akses tidak akan tampil, dan setiap aksi juga diperiksa di server.</li>
+<li><strong>Setiap perubahan penting tercatat</strong> di Audit Log (siapa, apa, kapan).</li>
+</ul>
+<hr />
+<h2>2. Login</h2>
+<ol>
+<li>Buka alamat aplikasi di browser (Chrome/Edge terbaru).</li>
+<li>Masukkan <strong>username</strong> dan <strong>password</strong> → klik <strong>Masuk</strong>.</li>
+<li>Anda akan masuk ke halaman <strong>Dashboard</strong>.</li>
+</ol>
+<p><strong>Akun bawaan (akun awal, silakan ganti/atur ulang oleh Admin lewat menu Pengaturan → User):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Username</th>
+<th>Password</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>admin</code></td>
+<td>sesuai konfigurasi awal</td>
+<td>Administrator</td>
+</tr>
+<tr>
+<td><code>owner</code></td>
+<td>sesuai konfigurasi awal</td>
+<td>Owner</td>
+</tr>
+<tr>
+<td><code>sales</code></td>
+<td>sesuai konfigurasi awal</td>
+<td>Live Sales</td>
+</tr>
+<tr>
+<td><code>produksi</code></td>
+<td>sesuai konfigurasi awal</td>
+<td>Produksi</td>
+</tr>
+<tr>
+<td><code>hr</code></td>
+<td>sesuai konfigurasi awal</td>
+<td>HR</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Penting:</strong> Sesudah Admin mengubah role/permission suatu user, user tersebut harus <strong>login ulang</strong> agar menu terbaru sesuai hak aksesnya.</p>
+</blockquote>
+<hr />
+<h2>3. Mengenal Tampilan</h2>
+<ul>
+<li><strong>Sidebar kiri</strong> — daftar menu, dikelompokkan menjadi 8 bagian (lihat §5). Menu otomatis difilter sesuai hak akses Anda.</li>
+<li><strong>Header halaman</strong> — judul halaman (breadcrumb), filter periode, dan tombol aksi (Tambah, Ekspor, dll) di sisi kanan.</li>
+<li><strong>Notifikasi (toast)</strong> — muncul di pojok sebagai balasan aksi: hijau = berhasil, merah = gagal, kuning = peringatan.</li>
+<li><strong>Tabel data</strong> — pencarian, filter tab status, urutan naik, tombol aksi per baris (lihat/edit/hapus).</li>
+<li><strong>Modal (jendela dialog)</strong> — dipakai untuk form tambah/ubah. Tekan <strong>Esc</strong> atau tombol <strong>×</strong> untuk menutup.</li>
+</ul>
+<hr />
+<h2>4. Alur Kerja Inti</h2>
+<p>Alur utama satu order, dari masuk sampai selesai:</p>
+<pre><code>Order Masuk (Pending)
+      │  input nomor resi
+      ▼
+   Picking  ──►  Dipicked  ──►  Siap Kirim
+      │                              │
+      │                    konfirmasi Kirim
+      │                              ▼
+      │                        Terkirim ──► Selesai
+      │
+      └── (batal / retur sebagai pengecualian)
+</code></pre>
+<p><strong>Status order (8 status):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Arti</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pending</td>
+<td>Order baru masuk, belum diproses</td>
+</tr>
+<tr>
+<td>Picking</td>
+<td>Sedang diambil/diambilkan barangnya</td>
+</tr>
+<tr>
+<td>Dipicked</td>
+<td>Barang sudah diambil, menunggu pengecekan</td>
+</tr>
+<tr>
+<td>Siap Kirim</td>
+<td>Sudah dikemas, menunggu dikirim</td>
+</tr>
+<tr>
+<td>Terkirim</td>
+<td>Sudah diserahkan ke kurir (stok otomatis berkurang)</td>
+</tr>
+<tr>
+<td>Selesai</td>
+<td>Order ditutup</td>
+</tr>
+<tr>
+<td>Dibatalkan</td>
+<td>Order dibatalkan</td>
+</tr>
+<tr>
+<td>Retur</td>
+<td>Barang dikembalikan pembeli</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aturan penting:</strong></p>
+<ul>
+<li><strong>Stok barang jadi berkurang otomatis</strong> saat Anda konfirmasi kirim, dengan jumlah aktual yang benar-benar dikirim — bukan saat order dibuat.</li>
+<li><strong>Retur</strong> bisa menambah kembali stok, hanya jika dicentang <em>restock</em> (barang layak jual).</li>
+<li><strong>Resi wajib unik</strong> — nomor resi tidak boleh dipakai dua order.</li>
+</ul>
+<hr />
+<h2>5. Panduan Tiap Menu</h2>
+<h3>5.1 Dashboard</h3>
+<p>Menu pertama, selalu tampil. Berisi ringkasan langsung: <strong>Order Masuk, Omzet, Laba Kotor, Item Terjual</strong>, grafik penjualan, order terbaru, dan status order yang sedang berjalan. Gunakan <strong>filter periode</strong> (7 hari / 30 hari / bulan ini) di atas untuk mengubah rentang.</p>
+<h3>5.2 Operasional</h3>
+<h4>Order &amp; Resi (<code>/order</code>)</h4>
+<p><strong>Menambah order baru:</strong>
+1. Buka <strong>Order &amp; Resi</strong> → klik <strong>Tambah Order</strong>.
+2. Isi: tanggal, marketplace (Shopee, TikTok Shop, Live, Dropship, Reseller, Offline), nama &amp; telepon pelanggan.
+3. Tambahkan item: pilih produk, jumlah (qty), harga satuan — bisa lebih dari satu item.
+4. Simpan. Order masuk dengan status <strong>Pending</strong>.</p>
+<p><strong>Melanjutkan order:</strong>
+1. Klik order → panel detail terbuka.
+2. <strong>Input Resi</strong> — masukkan nomor resi (wajib unik) untuk memindahkan ke tahap diproses.
+3. Gunakan tombol aksi per baris untuk mengubah status mengikuti alur §4 (Picking → Dipicked → Siap Kirim → Terkirim → Selesai).
+4. Tab status di atas tabel (<strong>Semua / Menunggu / Diproses / Terkirim / Selesai / Batal-Retur</strong>) untuk menyaring; kotak pencarian mencari nomor order, resi, atau pelanggan.
+5. <strong>Hapus</strong> hanya bisa untuk order tertentu (sistem menolak order yang sudah jalan prosesnya).</p>
+<h4>Picking (<code>/picking</code>)</h4>
+<p>Daftar order yang sedang diproses. Klik satu order → daftar barang yang harus diambil (per produk, warna, ukuran, jumlah) → centang selesai. Selesai picking memindahkan status ke <strong>Dipicked</strong>.</p>
+<h4>Pengiriman (<code>/pengiriman</code>)</h4>
+<p>Order yang sudah <strong>Siap Kirim</strong>. Klik → pastikan resi dan jumlah kirim benar → <strong>Konfirmasi Kirim</strong>. Di sinilah stok berkurang otomatis, status menjadi <strong>Terkirim</strong>, dan dashboard langsung terupdate.</p>
+<h4>Retur (<code>/retur</code>)</h4>
+<ol>
+<li>Klik <strong>Tambah Retur</strong> → pilih order asal → isi jumlah per produk.</li>
+<li>Centang <strong>restock</strong> bila barang layak jual (stok otomatis bertambah lewat mutasi <code>RETURN_IN</code>); biarkan kosong bila tidak.</li>
+<li>Status order asal menjadi <strong>Retur</strong>.</li>
+</ol>
+<h3>5.3 Produk &amp; Stok</h3>
+<h4>Produk (<code>/master/produk</code>)</h4>
+<p>Tiga tab: <strong>Produk</strong> (data produk + SKU + harga + HPP), <strong>Warna</strong>, <strong>Ukuran</strong> — semuanya CRUD (Tambah/Ubah/Hapus). Produk yang sudah terpakai di order tidak bisa dihapus (ditandai terpakai), agar data lama tetap aman.</p>
+<h4>Bahan Baku (<code>/master/bahan-baku</code>) &amp; Supplier (<code>/master/supplier</code>)</h4>
+<p>CRUD biasa untuk daftar bahan (kain, benang, kancing… beserta stok dan satuan) dan supplier.</p>
+<h4>Barang Jadi (<code>/stok/barang-jadi</code>)</h4>
+<p>Saldo stok per produk + warna + ukuran. <strong>Stok naik/turun otomatis</strong> dari produksi, pengiriman, retur, dan koreksi.</p>
+<h4>Mutasi Stok (<code>/stok/mutasi</code>)</h4>
+<p>Riwayat seluruh pergerakan stok dengan 6 tipe:</p>
+<table>
+<thead>
+<tr>
+<th>Tipe</th>
+<th>Kapan terjadi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PRODUCTION_IN</td>
+<td>Hasil produksi masuk gudang</td>
+</tr>
+<tr>
+<td>PRODUCTION_OUT</td>
+<td>Bahan dikeluarkan untuk produksi</td>
+</tr>
+<tr>
+<td>SALE_SHIPMENT</td>
+<td>Stok berkurang saat pengiriman</td>
+</tr>
+<tr>
+<td>RETURN_IN</td>
+<td>Retur masuk (restock)</td>
+</tr>
+<tr>
+<td>ADJUSTMENT_IN / OUT</td>
+<td>Koreksi manual bertambah/berkurang</td>
+</tr>
+</tbody>
+</table>
+<h3>5.4 Produksi</h3>
+<ul>
+<li><strong>Produksi (<code>/produksi</code>)</strong> — halaman muka: ringkasan bulan ini (pengeluaran bahan, batch cutting, jahit masuk, disetor) + jalan cepat ke dua menu di bawah.</li>
+<li><strong>Pengeluaran Bahan (<code>/produksi/pengeluaran-bahan</code>)</strong> — catat bahan yang dikeluarkan per batch (menyimpan stok bahan dan menjadi mutasi PRODUCTION_OUT).</li>
+<li><strong>Hasil Produksi (<code>/produksi/hasil</code>)</strong> — catat hasil cutting &amp; jahit per batch (pcs masuk, ditolak, diterima) → barang jadi bertambah otomatis (PRODUCTION_IN).</li>
+</ul>
+<h3>5.5 Analytics</h3>
+<ul>
+<li><strong>Penjualan (<code>/penjualan</code>)</strong> — tren omzet, jumlah order, dan produk terjual per periode.</li>
+<li><strong>Produk Terlaris (<code>/laporan/produk-terlaris</code>)</strong> — peringkat produk berdasarkan qty &amp; omzet terjual.</li>
+<li><strong>Laporan (<code>/laporan</code>)</strong> — rekap harian penjualan terealisasi (status Terkirim/Selesai): jumlah order, qty, omzet per tanggal + TOTAL. Filter rentang 7 hari / 30 hari / bulan ini / semua. Tombol ekspor ada di kanan atas (lihat §7).</li>
+</ul>
+<h3>5.6 Karyawan</h3>
+<ul>
+<li><strong>Karyawan (<code>/master/karyawan</code>)</strong> — data karyawan + tim.</li>
+<li><strong>Live Seller (<code>/hr/live-seller</code>)</strong> — penjualan per seller (live/online) untuk evaluasi kinerja.</li>
+<li><strong>Target &amp; Bonus (<code>/hr/target</code>)</strong> — target penjualan periodik beserta capaiannya.</li>
+<li><strong>Payroll (<code>/hr/payroll</code>)</strong> — rekap gaji + bonus karyawan (hanya role dengan akses payroll).</li>
+</ul>
+<h3>5.7 Owner / Financial</h3>
+<blockquote>
+<p>Hanya tampil untuk user dengan permission finansial (<strong>Owner</strong>). Angka bersifat rahasia perusahaan.</p>
+</blockquote>
+<ul>
+<li><strong>HPP (<code>/owner/hpp</code>)</strong> — harga pokok penjualan per produk.</li>
+<li><strong>Keuntungan (<code>/owner/keuntungan</code>)</strong> — pendapatan, HPP, laba kotor per periode.</li>
+<li><strong>Margin (<code>/owner/margin</code>)</strong> — margin per channel/marketplace.</li>
+<li><strong>Laporan Keuangan (<code>/owner/laporan-keuangan</code>)</strong> — KPI utama (Pendapatan, HPP, Laba Kotor, Margin %, Kas Masuk/Keluar, Saldo) + komposisi omzet per marketplace + arus kas. Bisa diekspor (lihat §7).</li>
+</ul>
+<h3>5.8 Pengaturan (Administrasi)</h3>
+<ul>
+<li><strong>User (<code>/pengaturan/user</code>)</strong> — tambah/ubah/hapus user, tentukan role (bisa lebih dari satu). Password di-hash. User yang terhapus otomatis tidak bisa login.</li>
+<li><strong>Role &amp; Permission (<code>/pengaturan/role</code>)</strong> — 7 role bawaan (Owner, Administrator, Live Sales, Produksi, Penjahit, Kancing, HR). Ubah role → centang permission per modul di grid yang tersedia. Role yang sedang dipakai user tidak bisa dihapus.</li>
+<li><strong>Audit Log (<code>/pengaturan/audit-log</code>)</strong> — jejak semua aksi penting (login, CRUD, verifikasi, impor) — filter per modul/aksi.</li>
+</ul>
+<hr />
+<h2>6. Impor Data Order (CSV / Excel)</h2>
+<p>Untuk input massal (misal rekap harian marketplace), gunakan <strong>Impor CSV</strong> di halaman <strong>Order &amp; Resi</strong>.</p>
+<p><strong>Langkah:</strong>
+1. Buka <strong>Order &amp; Resi</strong> → klik <strong>Impor CSV</strong>.
+2. Klik <strong>Template CSV</strong> atau <strong>Template Excel</strong> untuk mengunduh format baku.
+3. Isi data sesuai kolom (satu baris = satu order, satu produk).
+4. Klik area file → pilih berkas <code>.csv</code> atau <code>.xlsx</code> (maks 1000 baris; CSV 2 MB, Excel 5 MB).
+5. <strong>Pratinjau</strong> muncul: baris hijau = siap diimpor, baris kuning = bermasalah (ada keterangannya — baris ini dilewati).
+6. Klik <strong>Impor N order</strong> untuk menyelesaikan.</p>
+<p><strong>Kolom wajib dan formatnya:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Kolom</th>
+<th>Syarat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tanggal</code></td>
+<td><code>2026-10-03</code> atau <code>03/10/2026</code></td>
+</tr>
+<tr>
+<td><code>channel</code></td>
+<td>Shopee, TikTok, Live, Dropship, Reseller, Offline</td>
+</tr>
+<tr>
+<td><code>pelanggan</code>, <code>telepon</code></td>
+<td>teks bebas</td>
+</tr>
+<tr>
+<td><code>resi</code></td>
+<td>opsional; bila terisi wajib unik</td>
+</tr>
+<tr>
+<td><code>kode_produk</code></td>
+<td>harus sesuai kode produk aktif di menu Produk</td>
+</tr>
+<tr>
+<td><code>qty</code></td>
+<td>bilangan bulat ≥ 1</td>
+</tr>
+<tr>
+<td><code>harga_satuan</code></td>
+<td>bilangan bulat ≥ 0 (rupiah)</td>
+</tr>
+<tr>
+<td><code>catatan</code></td>
+<td>opsional</td>
+</tr>
+</tbody>
+</table>
+<p>Baris yang gagal (produk tidak ditemukan, resi duplikat, format salah) <strong>tidak menggagalkan seluruh impor</strong> — hanya baris itu yang dilewati dan dilaporkan per nomor baris.</p>
+<hr />
+<h2>7. Ekspor &amp; Cetak Laporan</h2>
+<p>Tiga tombol ekspor tersedia di halaman <strong>Laporan</strong> dan <strong>Laporan Keuangan</strong> (kanan atas):</p>
+<table>
+<thead>
+<tr>
+<th>Tombol</th>
+<th>Hasil</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Unduh Excel</strong></td>
+<td>Berkas <code>.xlsx</code> terformat — langsung terbuka &amp; terhitung di Excel</td>
+</tr>
+<tr>
+<td><strong>Unduh CSV</strong></td>
+<td>Berkas <code>.csv</code> (UTF-8) — double-click langsung terbuka di Excel</td>
+</tr>
+<tr>
+<td><strong>Cetak / PDF</strong></td>
+<td>Dialog print browser → pilih <strong>Save as PDF</strong> untuk menyimpan PDF</td>
+</tr>
+</tbody>
+</table>
+<p>Langkah menyimpan PDF: klik <strong>Cetak / PDF</strong> → pada dialog print pilih tujuan <strong>Save as PDF</strong> → Simpan. Sidebar dan tombol otomatis tidak ikut tercetak.</p>
+<p>Impor/ekspor juga mengikuti hak akses: impor butuh hak buat order; laporan keuangan hanya untuk yang berhak.</p>
+<hr />
+<h2>8. Hak Akses per Role</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Akses utama</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Owner</strong></td>
+<td>Semua, termasuk HPP, Keuntungan, Margin, Laporan Keuangan</td>
+</tr>
+<tr>
+<td><strong>Administrator</strong></td>
+<td>Semua modul operasional, master, produksi, laporan, pengaturan (tanpa angka finansial owner)</td>
+</tr>
+<tr>
+<td><strong>Live Sales</strong></td>
+<td>Order, Resi, Pengiriman, Retur, Penjualan, Live Seller</td>
+</tr>
+<tr>
+<td><strong>Produksi</strong></td>
+<td>Modul produksi, stok, bahan baku</td>
+</tr>
+<tr>
+<td><strong>Penjahit</strong></td>
+<td>Tugas jahit / hasil produksi</td>
+</tr>
+<tr>
+<td><strong>Kancing</strong></td>
+<td>Tugas kancing / hasil produksi</td>
+</tr>
+<tr>
+<td><strong>HR</strong></td>
+<td>Karyawan, Target &amp; Bonus, Payroll</td>
+</tr>
+</tbody>
+</table>
+<p>Menu yang tidak berhak tidak tampil; mengakses URL pun ditolak (403). Detail perubahan hak akses dilakukan di <strong>Pengaturan → Role &amp; Permission</strong>.</p>
+<hr />
+<h2>9. Masalah Umum (FAQ)</h2>
+<p><strong>Menu/fitur saya tidak muncul?</strong>
+Hak akses Anda belum mencakupnya. Hubungi Admin/Owner agar memberi permission lewat Pengaturan → Role &amp; Permission, lalu <strong>login ulang</strong>.</p>
+<p><strong>Muncul "403" / "Akses ditolak"?</strong>
+Anda login, tetapi tidak berhak pada halaman itu. Hal yang sama dengan poin di atas.</p>
+<p><strong>Angka di laporan nol semua?</strong>
+Normal bila memang belum ada transaksi pada rentang yang dipilih. Ubah filter rentang, atau pastikan order sudah berstatus <strong>Terkirim/Selesai</strong> (laporan hanya menghitung order terealisasi).</p>
+<p><strong>Impor ditolak, kenapa?</strong>
+Baca keterangan pada pratinjau: biasanya kolom wajib hilang, format tanggal salah, channel tidak dikenal, kode produk tidak ada, atau resi duplikat. Perbaiki baris itu lalu impor ulang.</p>
+<p><strong>Perubahan role tidak berefek?</strong>
+Login ulang — hak akses disimpan saat login.</p>
+<p><strong>Halaman terlihat aneh/kosong setelah lama terbuka?</strong>
+Muat ulang halaman (F5 / tombol refresh).</p>
+<p><strong>Lupa password?</strong>
+Hubungi Admin — reset/ganti password lewat Pengaturan → User.</p>
+<p><strong>Data penting terhapus?</strong>
+Sebagian data terlindungi (tidak bisa dihapus bila sudah dipakai). Jejak semua aksi dapat ditelusuri di <strong>Pengaturan → Audit Log</strong>.</p>
+<hr />
+<p><em>Panduan ini mengikuti kondisi aplikasi per Oktober 2026. Bila ada perubahan modul, dokumen akan diperbarui.</em></p>
+</body></html>

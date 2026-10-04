@@ -1,0 +1,97 @@
+{
+  "colors": [
+    "BURGUNDY",
+    "DENIM",
+    "COKSU",
+    "NAVY",
+    "HITAM",
+    "DUSTY",
+    "BABYBLUE",
+    "MAROON",
+    "GOLD",
+    "SAGE",
+    "EMERALD GREEN",
+    "FUCIA",
+    "SILVER",
+    "EMERALD BLUE",
+    "BROKEN WHITE",
+    "MILO",
+    "BUTTER YELLOW",
+    "ROSEGOLD"
+  ],
+  "models": [
+    "SLAYER",
+    "KUTUBARU",
+    "JANGGAN PENDEK",
+    "JANGGAN PANJANG",
+    "ROK DUYUNG",
+    "ROK PLISKET"
+  ],
+  "teams": [
+    "JIMAT/EKI",
+    "JIMAT/RANGGA",
+    "FERRY/RANGGA",
+    "JIMAT/GILANG",
+    "RANGGA/GILANG"
+  ],
+  "penjahit": [
+    "KANE",
+    "THE YANI",
+    "MAMAH FAHMI",
+    "BU NANANG",
+    "BU KARLAN",
+    "BU ENUNG",
+    "MAMAH",
+    "KARLINA",
+    "KIKI",
+    "SITI"
+  ],
+  "dropship": [
+    {
+      "code": "G",
+      "name": "GOTIK",
+      "price": 71500
+    },
+    {
+      "code": "E",
+      "name": "EKSIS",
+      "price": 71500
+    },
+    {
+      "code": "GS",
+      "name": "G SLAYER",
+      "price": 83500
+    },
+    {
+      "code": "IDH",
+      "name": "INDAH",
+      "price": 83500
+    },
+    {
+      "code": "KIM",
+      "name": "KIMONO",
+      "price": 78500
+    },
+    {
+      "code": "PE",
+      "name": "PLISKET EKSIS",
+      "price": 73500
+    },
+    {
+      "code": "PG",
+      "name": "PLISKET GOTIK",
+      "price": 73500
+    },
+    {
+      "code": "PS",
+      "name": "PLISKET SLAYER",
+      "price": 85500
+    },
+    {
+      "code": "KB",
+      "name": "KUTU BARU",
+      "price": 58500
+    }
+  ],
+  "fabrics": []
+}

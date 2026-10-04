@@ -1,0 +1,836 @@
+// =============================================================================
+// PRISMA SCHEMA — PHASE 1 FOUNDATION (auth + RBAC + audit generik)
+// ID strategy: CUID string untuk semua entity utama (konsisten, URL-friendly,
+// tidak membocorkan urutan data seperti auto-increment integer).
+// Database PostgreSQL disambungkan pada Phase 2; aplikasi Phase 1 berjalan
+// dengan data dummy yang struktur-nya зеркалит schema ini.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  email        String?    @unique
+  passwordHash String
+  employeeId   String?   @unique
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  employee     Employee? @relation(fields: [employeeId], references: [id])
+  roles        UserRole[]
+  auditLogs    AuditLog[]
+  stockMovements StockMovement[]
+  pickings     Picking[]
+  shipments    Shipment[]
+  returns      Return[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  description String?
+  module      String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// Jejak audit GENERIK lintas modul (append-only: tanpa updatedAt).
+/// Diisi Phase 2+ dari server actions (user, action, module, recordId,
+/// snapshot before/after sebagai JSON).
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  module    String
+  recordId  String?
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([module, createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// PHASE 2 — TABEL BISNIS
+// Hasil analisis 8 dokumen Excel client (lihat docs/DATABASE-SCHEMA.md).
+// Domain: Master → Produksi → Persediaan → Penjualan → HR → Keuangan.
+// Uang: satuan Rupiah bulat (Int). Saldo/kas berjalan dihitung aplikasi.
+// =============================================================================
+
+enum ProductType {
+  GARMENT // pakaian, punya ukuran
+  ACCESSORY // barang tanpa ukuran (mis. plastik packing)
+}
+
+enum StockMovementType {
+  PRODUCTION_IN // hasil produksi masuk gudang
+  PRODUCTION_OUT // pengeluaran bahan utk produksi
+  SALE_SHIPMENT // pengurangan stok saat pengiriman (actual qty)
+  RETURN_IN // penerimaan barang retur (layak jual)
+  ADJUSTMENT_IN // koreksi bertambah
+  ADJUSTMENT_OUT // koreksi berkurang
+}
+
+enum SalesChannel {
+  SHOPEE
+  TIKTOK
+  LIVE // host live streaming
+  DROPSHIP
+  RESELLER
+  OFFLINE
+}
+
+enum OrderStatus {
+  PENDING
+  PICKING
+  PICKED
+  READY_TO_SHIP
+  SHIPPED
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+/// Kode presensi — pemetaan sheet Excel: J1=WORK, J2=LEAVE (ijin/sakit/alfa),
+/// J3=MENSTRUAL (MERAH), J4=OVERTIME (LEMBUR).
+enum AttendanceCode {
+  WORK
+  LEAVE
+  SICK
+  ABSENT
+  MENSTRUAL
+  OVERTIME
+}
+
+enum CashFlowType {
+  IN // kas masuk (debet)
+  OUT // kas keluar (kredit)
+}
+
+/// Kategori kas dari sheet cash Flow (Shopee/TikTok tarik saldo, beli bahan, dll).
+enum CashCategory {
+  SALES
+  WITHDRAWAL // tarik saldo marketplace
+  MATERIAL // beli bahan
+  PAYROLL
+  OPERATIONAL // listrik, laundry, makan, dll
+  OTHER
+}
+
+enum PayrollStatus {
+  DRAFT
+  PAID
+}
+
+// ---------------------------------------------------------------------------
+// ENTITAS & MASTER
+// ---------------------------------------------------------------------------
+
+/// Brand/entitas usaha: Kebaya Authentik, Glamore Kebaya.
+model Entity {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  name      String
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cashTransactions CashTransaction[]
+  salesOrders       SalesOrder[]
+
+  @@map("entities")
+}
+
+/// Produk/katalog — sheet DATA + DROPSHIP "NAMA PRODUK".
+/// code = kode pendek dropship (G, GS, KB, ...).
+model Product {
+  id        String      @id @default(cuid())
+  code      String      @unique
+  name      String
+  type      ProductType @default(GARMENT)
+  basePrice Int         @default(0) // harga katalog
+  hpp       Int?        // HPP — SENSITIF (butuh HPP_VIEW); flat utk fase ini
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  sizes          ProductSize[]
+  stock          Stock[]
+  resellerPrices ResellerPrice[]
+  cuttings       Cutting[]
+  sewings        Sewing[]
+  orderItems     SalesOrderItem[]
+
+  @@map("products")
+}
+
+/// Warna — daftar referensi TUNGGAL (memperbaiki BURGUNDI/BERGUNDI, MARON/MAROON, dll).
+model Color {
+  id        String  @id @default(cuid())
+  code      String  @unique // normalisasi huruf besar: MAHOGANY, BURGUNDY
+  name      String
+  hex       String? // pratinjau warna UI (#RRGGBB)
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stock         Stock[]
+  fabricStock   FabricStock[]
+  materialUsage MaterialUsage[]
+  purchases     MaterialPurchase[]
+  cuttings      Cutting[]
+  sewings       Sewing[]
+  orderItems    SalesOrderItem[]
+
+  @@map("colors")
+}
+
+/// Ukuran — dua sistem digabung: apparel (S,M,L,XL) & numerik (4,6,8,10,12,14).
+/// Barang tanpa ukuran (ACCESSORY) memakai ukuran "ALL" (di-seed).
+model Size {
+  id        String @id @default(cuid())
+  code      String @unique
+  label     String
+  sortOrder Int    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products     ProductSize[]
+  stock        Stock[]
+  cuttingItems CuttingItem[]
+  sewingItems  SewingItem[]
+  orderItems   SalesOrderItem[]
+
+  @@map("sizes")
+}
+
+/// Ukuran yang berlaku per produk (ukuran mengikuti model — temuan #3).
+model ProductSize {
+  productId String
+  sizeId    String
+  sortOrder Int    @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      Size    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, sizeId])
+  @@map("product_sizes")
+}
+
+model Supplier {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  name      String
+  phone     String?
+  address   String?
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchases MaterialPurchase[]
+
+  @@map("suppliers")
+}
+
+/// Karyawan — sheet DATA (penjahit, tim) + presensi HITUNGAN GAJIH.
+/// posisi: CUTTING, SEWIST, HOST_LIVE, WAREHOUSE, SALES, ADMIN.
+model Employee {
+  id                String  @id @default(cuid())
+  code              String  @unique
+  name              String
+  position          String
+  baseSalary        Int     @default(0) // gaji pokok (rumus: 1.500.000)
+  transportAllowance Int     @default(0) // tunjangan transport (100.000)
+  workdayBasis      Int     @default(25) // dasar hitung gaji
+  isActive          Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user       User?
+  teamMembers ProductionTeamMember[]
+  sewings     Sewing[]
+  attendances Attendance[]
+  payrolls    Payroll[]
+
+  @@map("employees")
+}
+
+// ---------------------------------------------------------------------------
+// PRODUKSI
+// ---------------------------------------------------------------------------
+
+/// Tim cutting (pasangan: JIMAT/FERRY, RANGGA/GILANG, ...).
+model ProductionTeam {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      ProductionTeamMember[]
+  cuttings     Cutting[]
+  materialUsed MaterialUsage[]
+
+  @@map("production_teams")
+}
+
+model ProductionTeamMember {
+  teamId     String
+  employeeId String
+  team       ProductionTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  employee   Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+
+  @@id([teamId, employeeId])
+  @@map("production_team_members")
+}
+
+/// Jenis kain — BROKAT, TILLE, FUKORO, PURING, ROK BATIK, ...
+model Fabric {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  name      String
+  unit      String  @default("ROLL") // ROLL / METER / YARD
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stock     FabricStock[]
+  usage     MaterialUsage[]
+  purchases MaterialPurchase[]
+
+  @@map("fabrics")
+}
+
+/// Stok bahan = jenis kain × warna (sheet BAHAN, matriks STOCK).
+model FabricStock {
+  id       String   @id @default(cuid())
+  fabricId String
+  colorId  String
+  qty      Decimal  @default(0) @db.Decimal(12, 2)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  fabric   Fabric   @relation(fields: [fabricId], references: [id], onDelete: Cascade)
+  color    Color    @relation(fields: [colorId], references: [id], onDelete: Cascade)
+
+  @@unique([fabricId, colorId])
+  @@map("fabric_stocks")
+}
+
+/// Pengeluaran bahan — sheet BAHAN: tanggal, tim, kain, warna, roll, jumlah.
+model MaterialUsage {
+  id        String   @id @default(cuid())
+  date      DateTime
+  teamId    String
+  fabricId  String
+  colorId   String
+  roll      Int      @default(0)
+  qty       Int      @default(0) // jumlah (meter/yard terpakai)
+  note      String?
+  createdAt DateTime @default(now())
+
+  team   ProductionTeam @relation(fields: [teamId], references: [id])
+  fabric Fabric         @relation(fields: [fabricId], references: [id])
+  color  Color          @relation(fields: [colorId], references: [id])
+
+  @@index([date])
+  @@map("material_usages")
+}
+
+/// Pembelian bahan ke supplier (dari alur kas "Beli Puring ...").
+model MaterialPurchase {
+  id         String   @id @default(cuid())
+  date       DateTime
+  supplierId String
+  fabricId   String
+  colorId    String
+  qty        Decimal  @db.Decimal(12, 2)
+  unitPrice  Int      @default(0)
+  total      Int      @default(0)
+  note       String?
+  createdAt  DateTime @default(now())
+
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  fabric   Fabric   @relation(fields: [fabricId], references: [id])
+  color    Color    @relation(fields: [colorId], references: [id])
+
+  @@index([date])
+  @@map("material_purchases")
+}
+
+/// Cutting — sheet CUTTING NEW: tanggal, tim, model, warna, roll, lebih size S.
+model Cutting {
+  id        String   @id @default(cuid())
+  date      DateTime
+  teamId    String
+  productId String
+  colorId   String
+  roll      Int      @default(0)
+  surplus   Int      @default(0) // "Lebih size S"
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team    ProductionTeam @relation(fields: [teamId], references: [id])
+  product Product        @relation(fields: [productId], references: [id])
+  color   Color          @relation(fields: [colorId], references: [id])
+  items   CuttingItem[]
+
+  @@index([date])
+  @@index([productId, colorId])
+  @@map("cuttings")
+}
+
+/// Qty cutting per ukuran (4/S, 6/M, 8/L, 10/XL, 12, 14).
+model CuttingItem {
+  cuttingId String
+  sizeId    String
+  qty       Int @default(0)
+  cutting   Cutting @relation(fields: [cuttingId], references: [id], onDelete: Cascade)
+  size      Size    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@id([cuttingId, sizeId])
+  @@map("cutting_items")
+}
+
+/// Jahit + setoran piece-rate — sheet PENJAHIT:
+/// No Surat Jalan, penjahit, tgl setor, jumlah disetor, selisih −/+.
+/// delta dihitung aplikasi: total item − setorQty.
+model Sewing {
+  id         String    @id @default(cuid())
+  date       DateTime
+  productId  String
+  colorId    String
+  sewistId   String // karyawan penjahit
+  suratJalan String?
+  setorDate  DateTime?
+  setorQty   Int? // jumlah pcs disetor
+  note       String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  product Product   @relation(fields: [productId], references: [id])
+  color   Color     @relation(fields: [colorId], references: [id])
+  sewist  Employee  @relation(fields: [sewistId], references: [id])
+  items   SewingItem[]
+
+  @@index([date])
+  @@index([sewistId, date])
+  @@map("sewings")
+}
+
+model SewingItem {
+  sewingId String
+  sizeId   String
+  qty      Int     @default(0)
+  sewing   Sewing  @relation(fields: [sewingId], references: [id], onDelete: Cascade)
+  size     Size    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@id([sewingId, sizeId])
+  @@map("sewing_items")
+}
+
+// ---------------------------------------------------------------------------
+// PERSEDIAAN (barang jadi)
+// ---------------------------------------------------------------------------
+
+/// Stok barang jadi — kunci (produk, warna, ukuran). Ukuran "ALL" utk ACCESSORY.
+model Stock {
+  id        String   @id @default(cuid())
+  productId String
+  colorId   String? // null = barang tanpa warna (aksesori)
+  sizeId    String? // null = barang tanpa ukuran
+  qty       Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     Color?    @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  size      Size?     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+  movements StockMovement[]
+
+  @@unique([productId, colorId, sizeId])
+  @@map("stocks")
+}
+
+/// Mutasi stok — sheet MASUK/KELUAR + koreksi scan.
+model StockMovement {
+  id        String            @id @default(cuid())
+  stockId   String
+  type      StockMovementType
+  qty       Int // selalu positif; arah ditentukan type
+  refType   String? // ORDER, PICKING, SHIPMENT, RETURN, PRODUCTION, ADJUSTMENT
+  refId     String?
+  userId    String? // user yang melakukan
+  note      String?
+  createdAt DateTime          @default(now())
+
+  stock Stock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@index([stockId, createdAt])
+  @@index([createdAt])
+  @@index([type])
+  @@map("stock_movements")
+}
+
+/// Log scan barang — sheet "Scan" (input scanner hitung cepat).
+model StockScan {
+  id        String   @id @default(cuid())
+  code      String // kode/label yang discan
+  qty       Int      @default(1)
+  note      String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("stock_scans")
+}
+
+// ---------------------------------------------------------------------------
+// PENJUALAN
+// ---------------------------------------------------------------------------
+
+/// Reseller — sheet HITUNGAN RESELLER (JOING, PAJIM, RAJIL, RANGGA, REZA).
+model Reseller {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  name      String
+  phone     String?
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  prices   ResellerPrice[]
+  orders   SalesOrder[]
+  payments ResellerPayment[]
+
+  @@map("resellers")
+}
+
+/// Harga jual PER RESELLER (beda per orang — temuan #4).
+model ResellerPrice {
+  resellerId String
+  productId  String
+  price      Int // Rupiah
+  updatedAt  DateTime @updatedAt
+
+  reseller Reseller @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([resellerId, productId])
+  @@map("reseller_prices")
+}
+
+/// Order penjualan semua channel (dropship, reseller, marketplace, live).
+/// NOTE: sheet "SO" — jika ternyata Stok Opname (bukan Surat Order),
+/// tambahkan model StockOpname terpisah (lihat dokumen, pertanyaan #2).
+model SalesOrder {
+  id         String       @id @default(cuid())
+  orderNumber String      @unique // ORD-YYYYMMDD-001 (no urut internal)
+  date       DateTime
+  entityId   String? // brand asal (Kebaya Authentik / Glamore)
+  channel    SalesChannel
+  resellerId String? // wajib saat channel = RESELLER
+  status     OrderStatus  @default(PENDING)
+  totalQty   Int          @default(0) // Σ orderedQty item — dihitung aplikasi
+  totalAmount Int         @default(0) // Σ subtotal item — dihitung aplikasi
+  customerName  String?
+  customerPhone String?
+  shippingNumber String?  @unique // RESI — cegah shipment ganda
+  note       String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  entity    Entity?          @relation(fields: [entityId], references: [id])
+  reseller  Reseller?        @relation(fields: [resellerId], references: [id])
+  items     SalesOrderItem[]
+  picking   Picking?
+  shipment  Shipment?
+  returns   Return[]
+
+  @@index([date])
+  @@index([status])
+  @@index([channel, date])
+  @@index([resellerId])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  colorId     String?
+  sizeId      String?
+  orderedQty  Int
+  unitPrice   Int // snapshot harga saat order — tidak ikut ubah master
+  subtotal    Int // orderedQty × unitPrice — disimpan, bukan dihitung ulang
+  order       SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product    @relation(fields: [productId], references: [id])
+  color       Color?     @relation(fields: [colorId], references: [id])
+  size        Size?      @relation(fields: [sizeId], references: [id])
+  pickingItems PickingItem[]
+  shipmentItems ShipmentItem[]
+  returnItems  ReturnItem[]
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("sales_order_items")
+}
+
+/// Pembayaran reseller → pelunasan piutang (kolom BAYAR, "SISA PIUTANG").
+/// Piutang berjalan = Σ order RESELLER − Σ pembayaran (dihitung aplikasi).
+model ResellerPayment {
+  id         String   @id @default(cuid())
+  resellerId String
+  date       DateTime
+  amount     Int // Rupiah
+  method     String? // CASH / TRANSFER / QRIS
+  note       String?
+  createdAt  DateTime @default(now())
+
+  reseller Reseller @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  @@index([resellerId, date])
+  @@map("reseller_payments")
+}
+
+// ---------------------------------------------------------------------------
+// HR — PRESENSI, GAJI, BONUS
+// ---------------------------------------------------------------------------
+
+/// Presensi harian — sheet EGA/GEFIRA/EKI/RADIT. Kode J1-J4 → AttendanceCode.
+/// sesi1..3 = nilai sesi host live (SESI 1/2/3).
+model Attendance {
+  id         String         @id @default(cuid())
+  employeeId String
+  date       DateTime       @db.Date
+  code       AttendanceCode @default(WORK)
+  sesi1      Int?
+  sesi2      Int?
+  sesi3      Int?
+  overtimeHours Decimal?    @db.Decimal(4, 1)
+  note       String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@map("attendances")
+}
+
+/// Target penjualan bulanan (bonus) — sheet BONUS / Sheet1.
+/// Contoh: targetPcs 2000, targetAmount 6.875.000, komisi 2%, up-target 3%.
+model SalesTarget {
+  id            String  @id @default(cuid())
+  year          Int
+  month         Int // 1-12
+  targetPcs     Int     @default(0)
+  targetAmount  Int     @default(0) // Rupiah
+  commissionPct Decimal @default(0) @db.Decimal(5, 2) // persen
+  upTargetPct   Decimal @default(0) @db.Decimal(5, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([year, month])
+  @@map("sales_targets")
+}
+
+/// Gaji bulanan per karyawan — sheet "rumus" (pokok + tunjangan + bonus − potongan).
+model Payroll {
+  id         String        @id @default(cuid())
+  employeeId String
+  year       Int
+  month      Int
+  basePay    Int           @default(0) // gaji pokok prorata hari kerja
+  transport  Int           @default(0)
+  overtime   Int           @default(0)
+  bonus      Int           @default(0)
+  deduction  Int           @default(0) // potongan (ijin/alfa, dll)
+  total      Int           @default(0) // Σ — dihitung aplikasi
+  status     PayrollStatus @default(DRAFT)
+  paidAt     DateTime?
+  note       String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, year, month])
+  @@map("payrolls")
+}
+
+// ---------------------------------------------------------------------------
+// KEUANGAN — KAS (menu baru, dari 2 file cash Flow)
+// ---------------------------------------------------------------------------
+
+/// Cash flow harian per entitas. Saldo berjalan dihitung aplikasi
+/// (Σ IN − Σ OUT s.d. tanggal) — tidak disimpan per baris.
+model CashTransaction {
+  id          String        @id @default(cuid())
+  entityId    String
+  date        DateTime      @db.Date
+  description String
+  receiptNo   String? // No Kwitansi/Struk
+  type        CashFlowType
+  category    CashCategory  @default(OTHER)
+  amount      Int // Rupiah, selalu positif
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  entity Entity @relation(fields: [entityId], references: [id])
+
+  @@index([entityId, date])
+  @@map("cash_transactions")
+}
+
+// =============================================================================
+// ORDER & RESI (STEP 4 — workflow marketplace: Order → Picking → Kirim → Stok)
+// =============================================================================
+
+// Picking — draft pengambilan barang sebelum kirim. actualQty = qty riil.
+model Picking {
+  id            String   @id @default(cuid())
+  orderId       String   @unique // 1 order = 1 picking
+  note          String?
+  pickedByUser  String?
+  pickedAt      DateTime? // saat warehouse submit actual qty
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order        SalesOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  pickedBy     User?        @relation(fields: [pickedByUser], references: [id])
+  items        PickingItem[]
+
+  @@map("pickings")
+}
+
+model PickingItem {
+  id           String @id @default(cuid())
+  pickingId    String
+  orderItemId  String @unique // 1 baris item order = 1 baris picking
+  actualQty    Int    @default(0) // actual qty (bisa < orderedQty dgn flag eksplisit)
+  note         String?
+
+  picking     Picking        @relation(fields: [pickingId], references: [id], onDelete: Cascade)
+  orderItem   SalesOrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([pickingId])
+  @@map("picking_items")
+}
+
+// Shipment — konfirmasi kirim. SATU-SATUNYA tempat stok barang jadi berkurang.
+// shippingNumber unique → double shipment mustahil.
+model Shipment {
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  shippingNumber String   @unique // resi (sinkron dengan SalesOrder.shippingNumber)
+  shippedAt      DateTime @default(now())
+  userId         String?  // operator yg konfirmasi
+  createdAt      DateTime @default(now())
+
+  order  SalesOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user   User?           @relation(fields: [userId], references: [id])
+  items  ShipmentItem[]
+
+  @@index([shippedAt])
+  @@map("shipments")
+}
+
+model ShipmentItem {
+  id          String @id @default(cuid())
+  shipmentId  String
+  orderItemId String @unique // dikirim = actual qty hasil picking
+  qty         Int // qty terkirim (dari picking actualQty)
+
+  shipment  Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  orderItem SalesOrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@index([shipmentId])
+  @@map("shipment_items")
+}
+
+// Retur — penerimaan barang retur. TIDAK otomatis nambah stok:
+// stok hanya naik bila layak jual (RETURN_IN).
+model Return {
+  id        String   @id @default(cuid())
+  orderId   String
+  date      DateTime @default(now())
+  userId    String?  // penerima retur
+  note      String?
+  createdAt DateTime @default(now())
+
+  order  SalesOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user   User?        @relation(fields: [userId], references: [id])
+  items  ReturnItem[]
+
+  @@index([orderId])
+  @@index([date])
+  @@map("returns")
+}
+
+model ReturnItem {
+  id          String @id @default(cuid())
+  returnId    String
+  orderItemId String
+  qty         Int // jumlah diterima
+  restock     Boolean @default(false) // layak jual → RETURN_IN (stok naik)
+
+  retur    Return         @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItem SalesOrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@index([returnId])
+  @@map("return_items")
+}

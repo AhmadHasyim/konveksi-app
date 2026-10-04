@@ -1,36 +1,126 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+```gitignore
+# ================================
+# Dependencies
+# ================================
+node_modules/
+.pnp/
 .pnp.js
 
-# testing
-/coverage
+# ================================
+# Next.js
+# ================================
+.next/
+out/
+build/
+Temp/
 
-# next.js
-/.next/
-/out/
+# ================================
+# Testing
+# ================================
+coverage/
 
-# production
-/build
+# ================================
+# Environment / Secrets
+# ================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.example
 
-# misc
-.DS_Store
-*.pem
+# Jangan ignore .env.example
+# .env.example sebaiknya di-commit ke Git
 
-# debug
+# ================================
+# Prisma
+# ================================
+# Prisma migrations HARUS di-commit
+# prisma/migrations/
+
+# Jika menggunakan Prisma generated client
+# biasanya berada di node_modules/.prisma
+# sehingga otomatis sudah ter-ignore
+
+# ================================
+# TypeScript
+# ================================
+*.tsbuildinfo
+next-env.d.ts
+
+# ================================
+# Logs
+# ================================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# local env files
-.env*.local
-.env
+# ================================
+# OS
+# ================================
+.DS_Store
+Thumbs.db
 
-# vercel
-.vercel
+# ================================
+# Certificates / Private Keys
+# ================================
+*.pem
+*.key
+*.crt
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ================================
+# Vercel
+# ================================
+.vercel/
+
+# ================================
+# IDE
+# ================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+*.swp
+*.swo
+
+# ================================
+# AI Coding Agents
+# ================================
+.agent/
+.claude/
+.AGENTS.md
+.CLAUDE.md
+
+# ================================
+# Temporary files
+# ================================
+*.tmp
+*.temp
+*.bak
+
+# ================================
+# Local database / dumps
+# ================================
+*.sql
+*.dump
+*.sqlite
+*.sqlite3
+
+# ================================
+# OS / Editor
+# ================================
+.DS_Store
+
+
+# AI Agent local configuration
+.agents/
+.claude/
+
+AGENTS.md
+CLAUDE.md
+
+
+```
