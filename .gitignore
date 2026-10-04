@@ -104,7 +104,6 @@ Thumbs.db
 # ================================
 # Local database / dumps
 # ================================
-*.sql
 *.dump
 *.sqlite
 *.sqlite3
